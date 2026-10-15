@@ -7,7 +7,7 @@ operator. Requires Blender 4.2 or newer; no third-party runtime dependencies.
 
 - `blender_workflow_toolkit/`: extension entry point, operators, panels, and manifest.
 - `scripts/build.py`: standalone ZIP packager.
-- `scripts/export_models.py`: command-line per-object glTF exporter.
+- `scripts/blender/export_models.py`: per-object glTF exporter run inside Blender.
 - `tests/blender_smoke.py`: registration and operator integration checks.
 - `pyproject.toml`: uv project configuration and development dependencies.
 - `dist/`: generated installation archives (ignored by Git).
@@ -38,34 +38,18 @@ See the [Blender extension documentation](https://docs.blender.org/manual/en/4.5
 
 ## Export models from a .blend file
 
-With Blender 4.2+ on PATH, run using ordinary Python (no `bpy` pip install needed):
+With Blender 4.2+ on PATH, run the script directly inside Blender:
 
 ```sh
-python3 scripts/export_models.py example.blend ./exports
-```
+# Export all objects in example.blend to ./exports as separate GLB files.
+blender --background --disable-autoexec --python-exit-code 1 --python scripts/blender/export_models.py -- example.blend ./exports
 
-This launches Blender in the background and exports each visible mesh in the
-file's active view layer separately. It does not process other scenes or excluded
-collections. Each mesh gets its own folder containing a `.gltf`, associated
-buffers, and textures. Existing folders receive a numbered suffix instead of
-being overwritten. The original `.blend` file is not saved or modified.
-
-```sh
 # Export only the selection saved in the file, as self-contained GLB files.
-python3 scripts/export_models.py example.blend ./exports --selected-only --format glb
-
-# Specify Blender's executable if it is not on PATH (quote paths with spaces).
-python3 scripts/export_models.py example.blend ./exports --blender /opt/blender/blender
+blender --background --disable-autoexec --python-exit-code 1 --python scripts/blender/export_models.py -- example.blend ./exports --selected-only --format glb
 
 # Show all options; output defaults to example_exports beside example.blend.
-python3 scripts/export_models.py --help
+blender --background --python scripts/blender/export_models.py -- --help
 ```
-
-This tool exports individual meshes, not complete character rigs or collection
-assemblies. It retains object transforms and uses the glTF exporter's defaults
-for materials and animation. Automatic execution of scripts embedded in the
-source file is disabled, so assets relying on those scripts need separate setup.
-An export failure returns a nonzero exit code; earlier exports may remain.
 
 ## Development and validation
 
