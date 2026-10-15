@@ -1,17 +1,5 @@
 # Blender Workflow Toolkit
 
-A minimal Blender extension project with a 3D Viewport sidebar and an example
-operator. Requires Blender 4.2 or newer; no third-party runtime dependencies.
-
-## Structure
-
-- `blender_workflow_toolkit/`: extension entry point, operators, panels, and manifest.
-- `scripts/build.py`: standalone ZIP packager.
-- `scripts/blender/export_models.py`: per-object glTF exporter run inside Blender.
-- `tests/blender_smoke.py`: registration and operator integration checks.
-- `pyproject.toml`: uv project configuration and development dependencies.
-- `dist/`: generated installation archives (ignored by Git).
-
 ## Build and install
 
 Run from the repository root in a terminal using Python 3.11+:
@@ -36,67 +24,45 @@ blender --command extension build --source-dir blender_workflow_toolkit --output
 
 See the [Blender extension documentation](https://docs.blender.org/manual/en/4.5/advanced/extensions/getting_started.html).
 
-## Export models from a .blend file
+## Python Scripts
 
 With Blender 4.2+ on PATH, run the script directly inside Blender:
 
 ```sh
 # Export all objects in example.blend to ./exports as separate GLB files.
-blender --background --disable-autoexec --python-exit-code 1 --python scripts/blender/export_models.py -- example.blend ./exports
+blender --background --disable-autoexec --python-exit-code 1 --python scripts/export_models.py -- example.blend ./exports
 
 # Export only the selection saved in the file, as self-contained GLB files.
-blender --background --disable-autoexec --python-exit-code 1 --python scripts/blender/export_models.py -- example.blend ./exports --selected-only --format glb
+blender --background --disable-autoexec --python-exit-code 1 --python scripts/export_models.py -- example.blend ./exports --selected-only --format glb
 
 # Show all options; output defaults to example_exports beside example.blend.
-blender --background --python scripts/blender/export_models.py -- --help
+blender --background --python scripts/export_models.py -- --help
+```
+
+
+## Shell Wrapper
+
+```sh
+./tools/export_models.sh example.blend ./exports
+./tools/export_models.sh "my scene.blend" "./my exports" --selected-only 
 ```
 
 ## Development and validation
 
-### Editor setup (`bpy` imports)
+With Python 3.12+ and uv installed, run `uv sync` to install development
+dependencies and Blender API stubs. Commit `uv.lock`; use `uv sync --locked`
+for reproducible installs.
 
-Blender supplies `bpy` at runtime. For editor completion and import resolution,
-create a separate development environment with Blender 4.2 API stubs. With
-`uv` installed, run from the repository root (development Python requires 3.12+):
+In VS Code, select `.venv/bin/python` (Windows: `.venv/Scripts/python.exe`) via
+**Python: Select Interpreter**. Reload the window if import warnings persist.
+The stubs provide completion; Blender supplies the runtime `bpy` implementation.
+Imports suppress the expected `reportMissingModuleSource` warning.
 
-```sh
-uv sync
-```
+Add operators in `operators.py`, panels in `panels.py`, and register classes in
+`__init__.py` with dependencies first. Use four-space indentation and snake_case
+functions.
 
-This creates or updates `.venv`, installs the default `dev` dependency group,
-and generates `uv.lock`. Commit the generated lockfile for reproducible setups;
-subsequent installs can use `uv sync --locked`. Network access is needed for the
-initial dependency download.
-
-In VS Code:
-
-1. Run **Python: Select Interpreter** from the Command Palette.
-2. Select this repository's `.venv/bin/python` (Windows: `.venv/Scripts/python.exe`).
-3. Run **Developer: Reload Window** if the unresolved-import warning remains.
-
-The workspace setting defaults to `.venv`, but an existing interpreter selection
-must be changed manually. Confirm the stubs are installed with
-`uv pip show --python .venv/bin/python fake-bpy-module-4.2` (adjust the path on Windows).
-
-These [API stubs](https://github.com/nutti/fake-bpy-module) are development-only;
-execute the add-on and integration tests inside Blender. They are not included
-in the extension ZIP.
-
-If Pylance reports `Import "bpy" could not be resolved from source`
-(`reportMissingModuleSource`), it has found the stubs but not Blender's runtime
-implementation. The `bpy` imports suppress only that expected diagnostic with
-`# pyright: ignore[reportMissingModuleSource]`. Autocomplete and other import
-checks remain enabled. A plain `could not be resolved` warning instead means
-you should check `uv sync` and the selected interpreter as described above.
-
-### Implementation and checks
-
-Add actions in `operators.py`, UI in `panels.py`, and register new classes in
-`__init__.py`, with dependencies first. Unregistration uses reverse order.
-Use four-space indentation, snake_case functions, and Blender's `BWT_OT_` and
-`BWT_PT_` class naming conventions. No formatter or linter is configured yet.
-
-Run syntax and Blender integration checks from a terminal:
+Run checks from the repository root:
 
 ```sh
 python3 -m compileall -q blender_workflow_toolkit scripts tests
@@ -104,11 +70,9 @@ python3 -m unittest discover -s tests -p 'test_*.py'
 blender --background --factory-startup --python-exit-code 1 --python tests/blender_smoke.py
 ```
 
-The smoke test checks repeated registration, operator execution with empty and
-populated selections, and cleanup. It uses Blender's bundled Python. Manually
-verify the sidebar and notification in Blender after UI changes; record the
-Blender version and results in pull requests. Rebuild and reinstall after edits,
-then restart Blender to avoid cached modules.
+The smoke test verifies registration, operator execution, and cleanup. Verify UI
+changes manually in Blender and report the version and results in pull requests.
+Rebuild, reinstall, and restart Blender after add-on changes.
 
 ## Release metadata
 
