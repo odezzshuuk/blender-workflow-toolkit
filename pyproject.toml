@@ -1,0 +1,13 @@
+[project]
+name = "blender-workflow-toolkit"
+version = "0.1.0"
+description = "Development environment for the Blender Workflow Toolkit extension"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = ["fake-bpy-module-4.2"]
+
+[tool.uv]
+# Blender loads the extension; uv manages only the development environment.
+package = false

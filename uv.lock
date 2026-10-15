@@ -1,0 +1,27 @@
+version = 1
+revision = 5
+requires-python = ">=3.12"
+
+[[package]]
+name = "blender-workflow-toolkit"
+version = "0.1.0"
+source = { virtual = "." }
+
+[package.dev-dependencies]
+dev = [
+    { name = "fake-bpy-module-4-2" },
+]
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = [{ name = "fake-bpy-module-4-2" }]
+
+[[package]]
+name = "fake-bpy-module-4-2"
+version = "20260730"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f0/d2/c25f6be4c6f85c420687eb2346066cd355232b2110ee023fd50b019c7f26/fake_bpy_module_4_2-20260730.tar.gz", hash = "sha256:1e007a3480b341c7de17761c43b358e679b1ba9078f601e906c8dc3871e84e9b", size = 803572, upload-time = "2026-07-30T04:10:26.661Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bb/1e/3d22aa9e51558bfebb8840294c2adfb1ad457fa923cd0fbc03a30fa22ad0/fake_bpy_module_4_2-20260730-py3-none-any.whl", hash = "sha256:e21183e63b7ebcd91132f62264472b28220e37a670dc213545bd4989640f2c60", size = 926511, upload-time = "2026-07-30T04:10:25.054Z" },
+]
