@@ -22,7 +22,7 @@ def parse_args(argv=None):
 
 def export_path(output_dir, object_name, file_format):
     """Choose a flat destination without replacing an existing model or buffer."""
-    name = "mesh_" + (re.sub(r"[^A-Za-z0-9_-]", "_", object_name) or "Object")
+    name = (re.sub(r"[^A-Za-z0-9_-]", "_", object_name) or "Object")
     existing = {path.stem.casefold() for path in output_dir.iterdir()}
     stem = name
     suffix = 1
