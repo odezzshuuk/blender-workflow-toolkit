@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from scripts import export_models
+from tools import batch_export_models as export_models
 
 
 class ExportCliTests(unittest.TestCase):
@@ -23,7 +23,7 @@ class ExportCliTests(unittest.TestCase):
             output = Path(directory) / "my exports"
             argv = [
                 "blender", "--background", "--python-exit-code", "1",
-                "--python", "scripts/export_models.py", "--",
+                "--python", "tools/batch_export_models.py", "--",
                 str(source), str(output), "--format", "glb", "--selected-only",
             ]
             with patch.object(export_models.sys, "argv", argv):

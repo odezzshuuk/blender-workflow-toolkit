@@ -30,22 +30,45 @@ With Blender 4.2+ on PATH, run the script directly inside Blender:
 
 ```sh
 # Export all objects in example.blend to ./exports as separate GLB files.
-blender --background --disable-autoexec --python-exit-code 1 --python scripts/export_models.py -- example.blend ./exports
+blender --background --disable-autoexec --python-exit-code 1 --python tools/batch_export_models.py -- example.blend ./exports
 
 # Export only the selection saved in the file, as self-contained GLB files.
-blender --background --disable-autoexec --python-exit-code 1 --python scripts/export_models.py -- example.blend ./exports --selected-only --format glb
+blender --background --disable-autoexec --python-exit-code 1 --python tools/batch_export_models.py -- example.blend ./exports --selected-only --format glb
 
 # Show all options; output defaults to example_exports beside example.blend.
-blender --background --python scripts/export_models.py -- --help
+blender --background --python tools/batch_export_models.py -- --help
 ```
 
 
 ## Shell Wrapper
 
 ```sh
-./tools/export_models.sh example.blend ./exports
-./tools/export_models.sh "my scene.blend" "./my exports" --selected-only 
+./tools/batch_export_models.sh example.blend ./exports
+./tools/batch_export_models.sh "my scene.blend" "./my exports" --selected-only 
 ```
+
+On Linux, keep both scripts in `tools/` and symlink the wrapper into
+`~/.local/bin`. Run once from the repository root:
+
+```sh
+mkdir -p "$HOME/.local/bin"
+chmod +x tools/batch_export_models.sh
+ln -s "$PWD/tools/batch_export_models.sh" "$HOME/.local/bin/batch-export-models"
+```
+
+With `~/.local/bin` on PATH, run from any directory:
+
+```sh
+batch-export-models example.blend ./exports --selected-only
+```
+
+The wrapper resolves the symlink to find its companion Python script. Repository
+edits take effect immediately; moving the repository requires recreating the link.
+Input and output paths are relative to your current directory. Set `BLENDER_BIN`
+to override the default Steam Blender executable.
+
+Keep `.venv` in the repository and select it in your editor for `bpy` completion.
+The command uses Blender's bundled Python and does not require activating `.venv`.
 
 ## Development and validation
 
@@ -65,7 +88,7 @@ functions.
 Run checks from the repository root:
 
 ```sh
-python3 -m compileall -q blender_workflow_toolkit scripts tests
+python3 -m compileall -q blender_workflow_toolkit scripts tools tests
 python3 -m unittest discover -s tests -p 'test_*.py'
 blender --background --factory-startup --python-exit-code 1 --python tests/blender_smoke.py
 ```

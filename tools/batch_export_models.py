@@ -10,7 +10,7 @@ def parse_args(argv=None):
     if argv is None:
         argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     parser = argparse.ArgumentParser(
-        prog="blender --background --python scripts/export_models.py --",
+        prog="blender --background --python tools/batch_export_models.py --",
         description=__doc__,
     )
     parser.add_argument("blend_file", type=Path, help="Source .blend file")

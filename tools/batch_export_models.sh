@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
     cat <<'HELP'
-Usage: export_models.sh [--selected-only] INPUT.blend OUTPUT_DIR
+Usage: batch_export_models.sh [--selected-only] INPUT.blend OUTPUT_DIR
 
 Export visible meshes to OUTPUT_DIR using the Python exporter's default format.
   --selected-only  Export only the selection saved in the .blend file.
@@ -42,7 +42,9 @@ if [[ -z "$output_dir" || ( -e "$output_dir" && ! -d "$output_dir" ) ]]; then
     exit 2
 fi
 
-script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+# Resolve links installed in ~/.local/bin back to the repository (Linux).
+script_path=$(readlink -f -- "${BASH_SOURCE[0]}")
+script_dir=$(dirname -- "$script_path")
 blender_bin=${BLENDER_BIN:-"$HOME/.local/share/Steam/steamapps/common/Blender/blender"}
 if ! command -v "$blender_bin" >/dev/null 2>&1; then
     printf 'Blender not found: %s\nSet BLENDER_BIN to its executable path.\n' "$blender_bin" >&2
@@ -50,5 +52,5 @@ if ! command -v "$blender_bin" >/dev/null 2>&1; then
 fi
 
 exec "$blender_bin" --background --python-exit-code 1 \
-    --python "$script_dir/../scripts/export_models.py" -- \
+    --python "$script_dir/batch_export_models.py" -- \
     "$blend_file" "$output_dir" "${selection_args[@]}"
