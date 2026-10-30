@@ -18,11 +18,13 @@ fi
 
 # Find the repository relative to this script, regardless of the working directory.
 project_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+
 # Create the destination and resolve its absolute path for comparisons and messages.
 destination=${1:-"$HOME/.local/bin/blender-workflow"}
 sources_dir="$project_dir/headless-scripts"
 mkdir -p -- "$destination"
 destination=$(cd -- "$destination" && pwd)
+
 # Prevent installing files onto themselves.
 if [[ "$destination" == "$sources_dir" ]]; then
     printf 'Destination must differ from the source scripts directory.\n' >&2
@@ -32,6 +34,7 @@ fi
 # Unmatched globs expand to nothing; arrays preserve filenames containing spaces.
 shopt -s nullglob
 sources=("$sources_dir"/*.sh "$sources_dir"/*.py)
+
 if ((${#sources[@]} == 0)); then
     printf 'No shell or Python scripts found in %s/headless-scripts\n' "$project_dir" >&2
     exit 1
@@ -42,6 +45,7 @@ for source in "${sources[@]}"; do
     # Shell wrappers are executable; companion Python files are loaded by Blender.
     mode=644
     [[ "$source" == *.sh ]] && mode=755
+
     # ${source##*/} removes the directory prefix, keeping the original filename.
     install -m "$mode" -- "$source" "$destination/${source##*/}"
     printf 'Installed %s\n' "$destination/${source##*/}"

@@ -17,14 +17,19 @@ def create_materials(objects):
     in place, reusing image nodes so object and texture-node references stay stable. AO is exposed through glTF's
     recognized occlusion group rather than multiplied into the base color.
     """
+
     if not objects:
         raise ValueError("No visible meshes in the requested scope")
+
     for obj in objects:
         images = obj.get("bwt_bake_images")
+
         if not images or any(image is None for image in images.values()):
             raise ValueError(f"{obj.name}: bake textures first")
         if obj.data.uv_layers.get(obj.get("bwt_bake_uv", "")) is None:
             raise ValueError(f"{obj.name}: baked UV map is missing")
+
+    # Build or refresh the export shader for each completed bake set.
     for obj in objects:
         material = obj.get("bwt_baked_material")
         if material is None:
@@ -40,24 +45,34 @@ def create_materials(objects):
         for existing in list(tree.nodes):
             if existing not in image_nodes.values():
                 tree.nodes.remove(existing)
+
+        # Connect the surface shader and the UV coordinates used for baking.
         output = tree.nodes.new("ShaderNodeOutputMaterial")
         shader = tree.nodes.new("ShaderNodeBsdfPrincipled")
         tree.links.new(shader.outputs["BSDF"], output.inputs["Surface"])
         uv = cast(ShaderNodeUVMap, tree.nodes.new("ShaderNodeUVMap"))
+
         assert uv.outputs is not None
+
         uv.uv_map = obj["bwt_bake_uv"]
+
+        # Wire each baked map into its matching shader input.
         for index, (kind, image) in enumerate(obj["bwt_bake_images"].items()):
             texture = cast(ShaderNodeTexImage, image_nodes.get(kind))
             if texture is None:
                 texture = cast(ShaderNodeTexImage, tree.nodes.new("ShaderNodeTexImage"))
+
             assert texture.inputs is not None and texture.outputs is not None
+
             texture.image = image
             texture.label = kind
             texture.location = (-600, -index * 260)
             tree.links.new(uv.outputs["UV"], texture.inputs["Vector"])
             if kind == "Normal":
                 normal = cast(ShaderNodeNormalMap, tree.nodes.new("ShaderNodeNormalMap"))
+
                 assert normal.inputs is not None and normal.outputs is not None
+
                 normal.uv_map = uv.uv_map
                 tree.links.new(texture.outputs["Color"], normal.inputs["Color"])
                 tree.links.new(normal.outputs["Normal"], shader.inputs["Normal"])
@@ -66,7 +81,9 @@ def create_materials(objects):
                 if group is None:
                     # Blender registers shader-tree enum values dynamically; stubs list only DUMMY.
                     group = cast(ShaderNodeTree, bpy.data.node_groups.new("glTF Material Output", "ShaderNodeTree"))  # pyright: ignore[reportArgumentType]
+
                     assert group.interface is not None
+
                     group.interface.new_socket(name="Occlusion", in_out='INPUT', socket_type='NodeSocketFloat')
                 node = cast(ShaderNodeGroup, tree.nodes.new("ShaderNodeGroup"))
                 node.node_tree = group

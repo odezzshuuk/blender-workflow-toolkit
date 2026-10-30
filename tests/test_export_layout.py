@@ -1,4 +1,4 @@
-"""Check grouped output paths and material-free exports without requiring Blender."""
+"""Check direct output paths and material-free exports without requiring Blender."""
 
 from contextlib import redirect_stdout
 import io
@@ -12,23 +12,15 @@ from unittest.mock import Mock, patch
 from script_loader import load_script
 
 exporter = load_script("headless-scripts", "batch_export_models")
-export_models, name_prefix = exporter.export_models, exporter.name_prefix
+export_models = exporter.export_models
 
 
 class ExportLayoutTests(unittest.TestCase):
-    def test_prefixes_are_safe_and_have_a_fallback(self):
-        for name, expected in (("character_body", "character"), ("Chair", "Chair"),
-                               ("../body", "Object"), ("_body", "Object")):
-            with self.subTest(name=name):
-                self.assertEqual(name_prefix(name), expected)
-
-    def test_export_uses_group_folder_and_collision_policy_for_both_formats(self):
+    def test_export_uses_output_dir_and_collision_policy_for_both_formats(self):
         for file_format in ("gltf", "glb"):
             with self.subTest(file_format=file_format), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
-                model_dir = root / "models/character"
-                model_dir.mkdir(parents=True)
-                original = model_dir / f"character_body.{file_format}"
+                original = root / f"character_body.{file_format}"
                 original.write_text("original")
                 obj = SimpleNamespace(type='MESH', name='character_body', visible_get=lambda: True,
                                       material_slots=[SimpleNamespace(material=object())], hide_select=False, select_set=Mock())
@@ -55,8 +47,9 @@ class ExportLayoutTests(unittest.TestCase):
                                        selected_only=False, format=file_format, on_exists='number')
                 with patch.dict('sys.modules', {'bpy': bpy}), redirect_stdout(io.StringIO()):
                     export_models(args)
-                self.assertTrue((model_dir / f'character_body_1.{file_format}').is_file())
+                self.assertTrue((root / f'character_body_1.{file_format}').is_file())
                 self.assertEqual(original.read_text(), 'original')
+                self.assertFalse((root / 'models').exists())
                 self.assertFalse((root / 'meshes').exists())
                 self.assertFalse((root / 'textures').exists())
                 options = bpy.ops.export_scene.gltf.call_args.kwargs

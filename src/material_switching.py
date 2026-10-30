@@ -5,6 +5,8 @@ import bpy
 
 def target_objects(context):
     """Use the same visible-mesh scope as the baking controls."""
+
+    # Apply the same mesh scope used by the baking controls.
     candidates = (context.selected_objects if context.scene.bwt_bake_settings.selected_only
                   else context.view_layer.objects)
     return [obj for obj in candidates if obj.type == 'MESH' and obj.visible_get()]
@@ -17,8 +19,10 @@ def toggle_materials(objects):
     Shared meshes become independent so other objects retain their assignments.
     Original material ID references survive renaming and saving the blend file.
     """
+
     if not objects:
         raise ValueError("No visible meshes in the requested scope")
+
     restore = all(obj.get("bwt_original_slots") is not None for obj in objects)
     # Validate the whole batch before changing any assignments.
     for obj in objects:
@@ -29,11 +33,13 @@ def toggle_materials(objects):
                 raise ValueError(f"{obj.name}: material slot count changed; restore slots first")
             if indices is not None and len(indices) != len(obj.data.polygons):
                 raise ValueError(f"{obj.name}: face count changed; cannot restore original face assignments")
+
         if not restore and obj.get("bwt_baked_material") is None:
             raise ValueError(f"{obj.name}: create its baked material first")
         if not obj.material_slots:
             raise ValueError(f"{obj.name}: no material slots")
 
+    # Apply the chosen material state to the whole batch.
     for obj in objects:
         saved = obj.get("bwt_original_slots")
         if restore:
@@ -41,6 +47,8 @@ def toggle_materials(objects):
             if indices is not None:
                 if obj.data.users > 1:
                     obj.data = obj.data.copy()
+
+                # Restore mesh slots and per-face material assignments.
                 obj.data.materials.clear()
                 for i in range(len(saved)):
                     obj.data.materials.append(saved[str(i)].get("data_material"))
@@ -57,6 +65,8 @@ def toggle_materials(objects):
                 del obj["bwt_original_active_slot"]
             del obj["bwt_original_slots"]
         elif saved is None:
+
+            # Save source assignments before replacing them with one baked slot.
             obj["bwt_original_slots"] = {
                 str(i): {"link": slot.link,
                          **({"material": slot.material} if slot.material else {}),
@@ -67,6 +77,8 @@ def toggle_materials(objects):
             obj["bwt_original_active_slot"] = obj.active_material_index
             if obj.data.users > 1:
                 obj.data = obj.data.copy()
+
+            # Assign the baked material to every face of the independent mesh.
             obj.data.materials.clear()
             obj.data.materials.append(obj["bwt_baked_material"])
             obj.material_slots[0].link = 'DATA'

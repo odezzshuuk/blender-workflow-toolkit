@@ -5,10 +5,10 @@ usage() {
     cat <<'HELP'
 Usage: batch_export_tools.sh (--model | --image) [--selected-only] [--on-exists POLICY] INPUT.blend OUTPUT_DIR
 
-Export models or recorded baked images to OUTPUT_DIR. Choose exactly one mode.
+Export models or all images to OUTPUT_DIR. Choose exactly one mode.
   --model         Export visible meshes as GLB files without materials or textures.
-  --image         Export recorded baked images as PNG files.
-  --selected-only  Export only the selection saved in the .blend file.
+  --image         Export all images as PNG files.
+  --selected-only  Models only: use the saved selection; ignored for images.
   --on-exists POLICY  overwrite, number, or stop.
                       Default: prompt for models; stop for images.
   -h, --help       Show this help.
@@ -23,6 +23,8 @@ export_script=""
 positional=()
 selection_args=()
 exists_args=()
+
+# Collect the export mode and options to forward to the Python exporter.
 while (($#)); do
     case "$1" in
         --model|--image)
@@ -35,7 +37,7 @@ while (($#)); do
                 --image) export_script="batch_export_images.py" ;;
             esac
             shift ;;
-        --selected-only) selection_args=(--selected-only); shift ;;
+        --selected-only|--select-only) selection_args=(--selected-only); shift ;;
         --on-exists)
             if (($# < 2)); then
                 printf 'Expected overwrite, number, or stop after --on-exists.\n' >&2
@@ -77,6 +79,7 @@ fi
 if [[ "$output_dir" == '~/'* ]]; then
     output_dir="$HOME/${output_dir:2}"
 fi
+
 if [[ ! -f "$blend_file" || "${blend_file,,}" != *.blend ]]; then
     printf 'Expected an existing .blend file: %s\n' "$blend_file" >&2
     exit 2
@@ -90,11 +93,13 @@ fi
 script_path=$(readlink -f -- "${BASH_SOURCE[0]}")
 script_dir=$(dirname -- "$script_path")
 blender_bin=${BLENDER_BIN:-"$HOME/.local/share/Steam/steamapps/common/Blender/blender"}
+
 if ! command -v "$blender_bin" >/dev/null 2>&1; then
     printf 'Blender not found: %s\nSet BLENDER_BIN to its executable path.\n' "$blender_bin" >&2
     exit 127
 fi
 
+# Run the selected exporter in a disposable background Blender process.
 exec "$blender_bin" --background --disable-autoexec --python-exit-code 1 \
     --python "$script_dir/$export_script" -- \
     "$blend_file" "$output_dir" "${selection_args[@]}" "${exists_args[@]}"

@@ -1,4 +1,4 @@
-"""Check baked-image selection, collision handling, and save failure recovery."""
+"""Check all-image export, collision handling, and save failure recovery."""
 
 from contextlib import redirect_stdout
 import io
@@ -49,38 +49,30 @@ class ExportImageTests(unittest.TestCase):
             self.assertEqual(image.filepath_raw, '//original.exr')
             self.assertEqual(image.file_format, 'OPEN_EXR')
 
-    def test_exports_only_recorded_images_and_deduplicates_shared_maps(self):
-        class Image:
-            def __init__(self, name):
-                self.name = name
-
-            def as_pointer(self):
-                return id(self)
-
-        class Object(dict):
-            name = 'Object'
-
-        shared = Image('Truck_BaseColor')
-        other = Image('Other_Roughness')
-        objects = [Object(bwt_bake_images={'BaseColor': shared}),
-                   Object(bwt_bake_images={'BaseColor': shared, 'Roughness': other}), Object()]
+    def test_exports_all_images_without_addon_data_or_selection(self):
+        images = [SimpleNamespace(name='Unused'), SimpleNamespace(name='Texture')]
         bpy = SimpleNamespace(
             ops=SimpleNamespace(wm=SimpleNamespace(open_mainfile=Mock())),
-            types=SimpleNamespace(Image=Image), data=SimpleNamespace(objects=objects),
-            context=SimpleNamespace(selected_objects=objects[:1]),
+            data=SimpleNamespace(images=images),
         )
-        for selected_only, expected in ((False, [other, shared]), (True, [shared])):
-            with self.subTest(selected_only=selected_only), tempfile.TemporaryDirectory() as directory:
-                args = SimpleNamespace(blend_file=Path('scene.blend'), output_dir=Path(directory),
-                                       selected_only=selected_only, on_exists='stop')
+        for option in ([], ['--selected-only'], ['--select-only']):
+            with self.subTest(option=option), tempfile.TemporaryDirectory() as directory:
+                args = exporter.parse_args(['scene.blend', directory, *option])
                 with patch.dict('sys.modules', {'bpy': bpy}), patch.object(exporter, 'save_image') as save:
                     with redirect_stdout(io.StringIO()):
                         exporter.export_images(args)
-                self.assertEqual([call.args[0] for call in save.call_args_list], expected)
-        objects[0]['bwt_bake_images']['BaseColor'] = None
-        with patch.dict('sys.modules', {'bpy': bpy}):
-            with self.assertRaisesRegex(exporter.ExportError, 'Missing baked image'):
-                exporter.export_images(args)
+                self.assertEqual([call.args[0] for call in save.call_args_list], images[::-1])
+
+    def test_empty_image_collection(self):
+        bpy = SimpleNamespace(
+            ops=SimpleNamespace(wm=SimpleNamespace(open_mainfile=Mock())),
+            data=SimpleNamespace(images=[]),
+        )
+        with patch.dict('sys.modules', {'bpy': bpy}), patch.object(exporter, 'save_image') as save:
+            with redirect_stdout(io.StringIO()) as output:
+                exporter.export_images(exporter.parse_args(['scene.blend']))
+        save.assert_not_called()
+        self.assertIn('no images in the file', output.getvalue())
 
     def test_defaults_are_non_destructive(self):
         args = exporter.parse_args(['scene.blend'])

@@ -23,12 +23,14 @@ public partial class CustomExportMaterials : EditorScenePostImport
             : sourceDirectory;
         string materialDirectory = outputDirectory.PathJoin("materials");
         Error error = DirAccess.MakeDirRecursiveAbsolute(materialDirectory);
+
         if (error != Error.Ok)
         {
             GD.PushError($"Cannot create material directory '{materialDirectory}': {error}");
             return scene;
         }
 
+        // Track shared materials while extracting resources throughout the imported scene.
         var materials = new Dictionary<ulong, Material>();
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         Visit(scene, materialDirectory, materials, names);
@@ -48,6 +50,8 @@ public partial class CustomExportMaterials : EditorScenePostImport
             Mesh mesh = instance.Mesh;
             if (mesh != null)
             {
+
+                // Replace surface materials and overrides with reusable external resources.
                 for (int surface = 0; surface < mesh.GetSurfaceCount(); surface++)
                 {
                     Material material = mesh.SurfaceGetMaterial(surface);
@@ -62,6 +66,7 @@ public partial class CustomExportMaterials : EditorScenePostImport
             }
         }
 
+        // Process nested meshes throughout the scene hierarchy.
         foreach (Node child in node.GetChildren())
             Visit(child, directory, materials, names);
     }
@@ -70,6 +75,7 @@ public partial class CustomExportMaterials : EditorScenePostImport
         Dictionary<ulong, Material> materials, HashSet<string> names)
     {
         ulong id = material.GetInstanceId();
+
         if (materials.TryGetValue(id, out Material cached))
             return cached;
 
@@ -81,6 +87,7 @@ public partial class CustomExportMaterials : EditorScenePostImport
             return material;
         }
 
+        // Derive a safe material filename and its grouping directory.
         string stem = Regex.Replace(material.ResourceName, "[^A-Za-z0-9_-]", "_");
         if (string.IsNullOrEmpty(stem))
             stem = "Material";
@@ -89,22 +96,26 @@ public partial class CustomExportMaterials : EditorScenePostImport
             prefix = "Material";
         string groupDirectory = directory.PathJoin(prefix);
         Error directoryError = DirAccess.MakeDirRecursiveAbsolute(groupDirectory);
+
         if (directoryError != Error.Ok)
         {
             GD.PushError($"Cannot create material directory '{groupDirectory}': {directoryError}; keeping the imported material.");
             materials[id] = material;
             return material;
         }
+
         // Reserve names in traversal order, independent of files from earlier imports.
         string name = stem;
         for (int suffix = 2; !names.Add(name); suffix++)
             name = $"{stem}_{suffix}";
         string path = groupDirectory.PathJoin(name + ".tres");
 
+        // Reuse an existing external material so edits survive reimport.
         Material external;
         if (FileAccess.FileExists(path))
         {
             external = ResourceLoader.Load<Material>(path);
+
             if (external == null)
             {
                 GD.PushError($"Cannot load material '{path}'; keeping the imported material.");
@@ -117,16 +128,19 @@ public partial class CustomExportMaterials : EditorScenePostImport
             // Shallow duplication keeps external texture references intact.
             external = (Material)material.Duplicate();
             Error error = ResourceSaver.Save(external, path);
+
             if (error != Error.Ok)
             {
                 GD.PushError($"Cannot save material '{path}': {error}; keeping the imported material.");
                 materials[id] = material;
                 return material;
             }
+
             // Give the replacement a persistent external reference for scene packing.
             external.ResourcePath = path;
         }
 
+        // Cache both identities so shared references use the same external resource.
         materials[id] = external;
         materials[external.GetInstanceId()] = external;
         return external;

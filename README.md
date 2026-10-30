@@ -21,19 +21,17 @@ blender --background --factory-startup --command extension validate dist/batch_m
 ## Shell Wrapper
 
 - `--selected-only` 
+  - restricts models to the saved selection; 
+  - image exports ignore it.
 - `--on-exists overwrite|number|stop`.
-- Choose one of `--model` (GLB meshes) or `--image` (baked PNG images).
-  - for `--model`, files export to directory `<output_dir>/models/<model_name_prefix>/`
-  - for `--image`, files export to directory `<output_dir>/textures/<model_name_prefix>/`.
+- Choose one of `--model` (GLB meshes) or `--image` (all images as PNGs).
+  - Both modes export directly into `<output_dir>`.
+  - Image export reads all Blender image datablocks and does not require add-on bake records.
 
 ```sh
 ./headless-scripts/batch_export_tools.sh --model example.blend ./output
-./headless-scripts/batch_export_tools.sh --image "example.blend" "./output" --selected-only
-```
-
-
-```sh
-./headless-scripts/batch_export_tools.sh --image example.blend ./textures --on-exists number
+./headless-scripts/batch_export_tools.sh --image "example.blend" "./output"
+./headless-scripts/batch_export_tools.sh --image --on-exists overwrite example.blend ./textures 
 ```
 
 ## Headless Scripts

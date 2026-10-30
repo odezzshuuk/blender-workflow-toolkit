@@ -41,12 +41,16 @@ def find_data_users(collection_name: str, name: str) -> tuple[str, list[str]]:
 
     if collection_name not in {item[0] for item in DATA_TYPE_ITEMS}:
         raise ValueError('Choose a supported data-block type')
+
     collection = getattr(bpy.data, collection_name)
     matches = [block for block in collection if block.name == name]
+
     if not matches:
         raise ValueError('Choose an existing data-block')
     if len(matches) > 1:
         raise ValueError('Multiple libraries contain this name; use a uniquely named data-block')
+
+    # Find direct references without making this tool a user of the target.
     target = matches[0]
     # The 4.2 stubs incorrectly require optional filters; empty filters exclude all IDs.
     user_map = cast('Callable[..., dict[ID, set[ID]]]', bpy.data.user_map)

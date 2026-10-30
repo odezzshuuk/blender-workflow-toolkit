@@ -118,6 +118,7 @@ class BWT_OT_batch_bake_materials(Operator):
         if not hasattr(context.scene, 'cycles'):
             cls.poll_message_set("Cycles must be available to bake materials")
             return False
+
         return True
 
     def execute(self, context: Context) -> OperatorResult:
@@ -125,6 +126,7 @@ class BWT_OT_batch_bake_materials(Operator):
         settings = cast(_SceneWithBakeSettings, context.scene).bwt_bake_settings
         # Use a fixed map order rather than the unordered enum flag set.
         maps: tuple[str, ...] = tuple(item[0] for item in MAP_ITEMS if item[0] in settings.maps)
+
         if not maps:
             self.report({'ERROR'}, "Select at least one texture map")
             return {'CANCELLED'}
@@ -142,10 +144,12 @@ class BWT_OT_batch_bake_materials(Operator):
             )
         except (BakeError, ValueError, RuntimeError) as error:
             completed = sum(before.get(image.name) != image.as_pointer() for image in bpy.data.images)
+
             if completed:
                 # FINISHED creates an undo step for images kept from earlier bakes.
                 self.report({'WARNING'}, f"Bake stopped: {error}. Kept {completed} completed image(s); baked materials may need updating")
                 return {'FINISHED'}
+
             self.report({'ERROR'}, str(error))
             return {'CANCELLED'}
         finally:
@@ -154,9 +158,11 @@ class BWT_OT_batch_bake_materials(Operator):
                 window.cursor_set('DEFAULT')
 
         count = sum(len(images) for images in baked.values())
+
         if not count:
             self.report({'WARNING'}, "No visible meshes to bake; select a mesh or disable Selected Meshes Only")
             return {'CANCELLED'}
+
         self.report({'INFO'}, f"Baked {count} image(s) from {len(baked)} mesh(es). Corresponding baked materials created")
         return {'FINISHED'}
 
@@ -173,6 +179,8 @@ class BWT_OT_toggle_baked_materials(Operator):
 
     def execute(self, context: Context) -> OperatorResult:
         try:
+
+            # Switch the requested meshes between source and baked assignments.
             state = toggle_materials(target_objects(context))
         except (ValueError, RuntimeError) as error:
             self.report({'ERROR'}, str(error))
@@ -196,8 +204,10 @@ class BWT_PT_batch_bake_materials(Panel):
     def draw(self, context: Context) -> None:
         # Blender calls draw repeatedly to refresh the UI; baking happens only in execute.
         layout: UILayout | None = self.layout
+
         if layout is None:
             return
+
         settings = cast(_SceneWithBakeSettings, context.scene).bwt_bake_settings
         # prop creates an editable control bound directly to a Blender property.
         layout.prop(settings, "selected_only")
@@ -225,6 +235,8 @@ class BWT_PT_batch_bake_materials(Panel):
 
 
 def _clear_user_results(self, context) -> None:
+
+    # Clear the displayed references when the search target changes.
     self.results = ''
     self.result_target = ''
 
@@ -257,10 +269,14 @@ class BWT_OT_find_data_users(Operator):
         settings = cast(_SceneWithDataUserSettings, context.scene).bwt_data_user_settings
         _clear_user_results(settings, context)
         try:
+
+            # Look up direct references for the selected data-block.
             target, users = find_data_users(settings.data_type, settings.target_name)
         except ValueError as error:
             self.report({'WARNING'}, str(error))
             return {'CANCELLED'}
+
+        # Publish the reference list in both the panel and the Info editor.
         settings.result_target = target
         settings.results = '\n'.join(users) if users else 'No direct data-block users found.'
         self.report({'INFO'}, f'Direct users of {target} ({len(users)}):')
@@ -280,9 +296,13 @@ class BWT_PT_data_users(Panel):
 
     def draw(self, context: Context) -> None:
         layout = self.layout
+
         if layout is None:
             return
+
         settings = cast(_SceneWithDataUserSettings, context.scene).bwt_data_user_settings
+
+        # Build the data-block picker and reference lookup controls.
         layout.prop(settings, "data_type")
         layout.prop_search(settings, "target_name", bpy.data, settings.data_type)
         row = layout.row()
