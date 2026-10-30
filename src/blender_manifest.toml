@@ -1,0 +1,12 @@
+schema_version = "1.0.0"
+id = "batch_material_baker"
+version = "1.0.0"
+name = "Batch Material Baker"
+tagline = "Bake mesh materials into packed images in the current scene"
+maintainer = "Blender Workflow Toolkit"
+type = "add-on"
+blender_version_min = "4.2.0"
+license = ["SPDX:GPL-3.0-or-later"]
+
+[build]
+paths_exclude_pattern = ["__pycache__/", ".*.pyc", "*.zip"]

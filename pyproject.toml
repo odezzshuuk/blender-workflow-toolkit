@@ -11,3 +11,13 @@ dev = ["fake-bpy-module-4.2"]
 [tool.uv]
 # Blender loads the extension; uv manages only the development environment.
 package = false
+
+[tool.pyright]
+include = ["src", "headless-scripts"]
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
+# Blender provides bpy at runtime; fake-bpy-module supplies its type stubs here.
+reportMissingModuleSource = false
+reportInvalidTypeForm = "none"
